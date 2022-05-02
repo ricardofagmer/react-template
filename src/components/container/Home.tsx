@@ -15,7 +15,6 @@ import SideNav from './SideNav'
 
 const Home = () => {
 
-  const sql = new PessoaService();
   const dispatch  = useDispatch();
 
   return (

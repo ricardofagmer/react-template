@@ -1,20 +1,30 @@
-import { PessoaActionTypes } from "../constants";
+import { pessoaActionTypes } from "../constants";
 
 
-const INITIAL_STATE = {
-    pessoas: [{ nome: 'Ricardo', id: 9, sobrenome: 'Fagmer'}]
-};
+const INITIAL_STATE = { pessoas: [], isLoading: false };
 
 export default function (state = INITIAL_STATE, action) {
     switch (action.type) {
-        case PessoaActionTypes.LISTAR:
-            return { ...state, pessoas: action.payload }
-        case PessoaActionTypes.ADICIONAR:
+        case pessoaActionTypes.LOAD_LIST:
+            return {
+                ...state, isLoading: action.payload,                
+            }
+        case pessoaActionTypes.LIST:
+            return {
+                ...state,
+                isLoading: false,
+                pessoas: action.payload,
+                errorMessage: null
+            }
+        case pessoaActionTypes.CREATE:
             return { ...state, pessoas: [...state.pessoas, action.payload] }
-        case PessoaActionTypes.ATUALIZAR:
-            const pessoas = state.pessoas.map(el => el.id === action.payload.id ? action.payload : el);
-            return { ...state, pessoas}
-        case PessoaActionTypes.REMOVER:
+        case pessoaActionTypes.UPDATE:
+            return {
+                ...state,
+                isLoading: false,
+                errorMessage: null,
+            }
+        case pessoaActionTypes.REMOVE:
             return { ...state, pessoas: state.pessoas.filter(el => el.id !== action.payload.id) };
         default:
             return state;

@@ -1,19 +1,37 @@
 import Axios, { AxiosObservable } from "axios-observable";
-import { catchError, take } from "rxjs";
+import { Dispatch } from "redux";
+import { catchError, finalize, take } from "rxjs";
 import { environment } from "../environment/environment";
 import { BaseResource } from "./base-resource";
 
-
+export interface ActionsResource {
+  LIST: any;
+  CREATE: any;
+  UPDATE: any;
+  REMOVE: any;
+  ERROR?: any;
+  LOAD_LIST?: any;
+}
+export interface IOptionsSelect {
+  options?: {
+    pageNumber?: number;
+    pageSize?: number;
+    select?: string[];
+    relations?: string[];
+    showDeleted?: boolean;
+    query?: { [p: string]: any }
+  }
+}
 export abstract class BaseResourceService<T extends BaseResource>{
   protected abstract readonly resourceEndpoint: string;
 
   http;
 
-  constructor() {
-    this.http = Axios.create({ baseURL: environment.api })
+  constructor(private action: ActionsResource) {
+    this.http = Axios.create({ baseURL: environment.api });
   }
 
-  findOne(
+  protected findOne(
     id: number,
     options?: {
       select?: string[];
@@ -32,15 +50,7 @@ export abstract class BaseResourceService<T extends BaseResource>{
       );
   }
 
-  public findAll(options?: {
-    pageNumber?: number;
-    pageSize?: number;
-    select?: string[];
-    relations?: string[];
-    showDeleted?: boolean;
-    query?: { [p: string]: any };
-  }): AxiosObservable<T[]> {
-
+  private findAll(options?: IOptionsSelect): AxiosObservable<T[]> {
     return this.http
       .get<T[]>(this.resourceEndpoint, { params: options })
       .pipe(
@@ -51,7 +61,7 @@ export abstract class BaseResourceService<T extends BaseResource>{
         }));
   }
 
-  create(resource: T): AxiosObservable<T> {
+  private create(resource: T): AxiosObservable<T> {
     if ('id' in resource) {
       delete resource.id;
     }
@@ -66,7 +76,7 @@ export abstract class BaseResourceService<T extends BaseResource>{
   }
 
 
-  update(resource: T): AxiosObservable<T> {
+  private patch(resource: T): AxiosObservable<T> {
     return this.http.patch<T>(`${this.resourceEndpoint}/${resource.id}`, resource).pipe(
       catchError((err) => {
         console.warn(err);
@@ -76,19 +86,47 @@ export abstract class BaseResourceService<T extends BaseResource>{
     );
   }
 
-  delete(resource: T): AxiosObservable<void> {
+  private delete(resource: T): AxiosObservable<void> {
     return this.http.delete<void>(this.resourceEndpoint, { data: resource }).pipe(take(1));
   }
 
-  restore(resource: T): AxiosObservable<void> {
+  private restore(resource: T): AxiosObservable<void> {
     return this.http.post<void>(this.resourceEndpoint, resource).pipe(take(1));
   }
 
 
-  softDelete(resource: T): AxiosObservable<void> {
+  private softDelete(resource: T): AxiosObservable<void> {
     const requestUrl = [environment.api, this.resourceEndpoint, resource.id, 'soft'].join('/');
 
     return this.http.delete<void>(requestUrl).pipe(take(1));
+  }
+
+  list(options?: IOptionsSelect) {
+    return async (dispatch: Dispatch) => {
+      dispatch(this.action.LOAD_LIST(true));
+      
+      this.findAll(options)
+        .pipe(finalize(() => dispatch(this.action.LOAD_LIST(false))))
+        .subscribe((data) => dispatch(this.action.LIST(data.data)));
+    }
+  }
+
+  save(pessoa: T) {
+    return async (dispatch: Dispatch) => {
+      await this.create(pessoa).subscribe(data => dispatch(this.action.CREATE(data)));
+    }
+  }
+
+  update(pessoa: T) {
+    return async (dispatch: Dispatch) => {
+      await this.patch(pessoa).subscribe(data => dispatch(this.action.UPDATE(data)));
+    }
+  }
+
+  remove(pessoa: T) {
+    return async (dispatch: Dispatch) => {
+      await this.softDelete(pessoa).subscribe(data => dispatch(this.action.REMOVE(data)));
+    }
   }
 
 

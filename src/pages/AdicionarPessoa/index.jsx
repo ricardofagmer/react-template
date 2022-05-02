@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { useDispatch } from 'react-redux';
 import { PessoaService } from '../../services/pessoa.service';
-import { pessoasActions } from '../../store/actions/pessoa.action';
 import ListarPessoas from '../ListarPessoas';
 
 
@@ -21,7 +20,6 @@ function AdicionarPessoa() {
         const pessoa = { nome, sobrenome };
 
         pessoaService.create(pessoa).subscribe(res => {
-            dispatch(pessoasActions.adicionarPessoas(res.data));
         });
 
         pessoaService.findAll().subscribe(data => console.log(data.data));
